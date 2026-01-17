@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="bn" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Admin Panel</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;600&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --sidebar-width: 260px;
+            --transition-speed: 0.3s;
+        }
+        body {
+            font-family: 'Poppins', 'Hind Siliguri', sans-serif;
+            background-color: var(--bs-body-bg);
+            transition: background-color var(--transition-speed), color var(--transition-speed);
+            overflow-x: hidden;
+            margin: 0;
+        }
+        .login-wrapper {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000;
+            transition: all 0.5s ease;
+        }
+        .login-card {
+            width: 100%; max-width: 400px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: slideUp 0.5s ease;
+        }
+        .d-flex-wrapper {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            align-items: stretch;
+            position: relative;
+        }
+        #sidebar {
+            min-width: var(--sidebar-width);
+            max-width: var(--sidebar-width);
+            background: #2c3e50;
+            color: #fff;
+            height: 100vh;
+            transition: all var(--transition-speed);
+            z-index: 1050;
+            position: fixed;
+            top: 0; left: 0;
+            overflow-y: auto;
+            margin-left: calc(var(--sidebar-width) * -1);
+        }
+        #sidebar.active {
+            margin-left: 0;
+        }
+        .sidebar-header {
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.3rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        #sidebar ul.components {
+            padding: 20px 0;
+            list-style: none;
+            margin: 0;
+        }
+        #sidebar ul li a {
+            padding: 15px 25px;
+            font-size: 0.95rem;
+            display: block;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+        #sidebar ul li a:hover, #sidebar ul li a.active-link {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+            border-left: 4px solid var(--primary-color);
+            padding-left: 30px;
+        }
+        #content {
+            width: 100%;
+            margin-left: 0;
+            transition: all var(--transition-speed);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.5); 
+            z-index: 1040;
+            backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.show { display: block; }
+        .navbar {
+            padding: 15px 25px;
+            background: var(--bs-body-bg);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-bottom: 1px solid var(--bs-border-color);
+        }
+        .main-content {
+            padding: 30px;
+            flex: 1;
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+            transition: transform 0.2s;
+            margin-bottom: 24px;
+        }
+        .stat-card { border-left: 5px solid; }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #loadingSpinner {
+            display: none;
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 3000;
+        }
+        .list-item-img {
+            width: 40px; height: 40px; object-fit: cover; border-radius: 50%;
+        }
+        .action-btn {
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .cl-slider-container {
+            width: 500%;
+            display: flex;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            height: 100%;
+        }
+        .cl-slide {
+            width: 20%;
+            flex-shrink: 0;
+            padding: 10px;
+            height: 100%;
+            overflow-y: auto;
+            position: relative;
+        }
+        .cl-item {
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--bs-border-color);
+        }
+        .cl-item:hover {
+            background-color: var(--bs-tertiary-bg);
+            transform: translateX(5px);
+            border-color: var(--primary-color);
+        }
+        .fab-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 100;
+            transition: transform 0.2s;
+        }
+        .fab-btn:hover {
+            transform: scale(1.1);
+            background-color: #375ac7;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingSpinner">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div id="loginSection" class="login-wrapper">
+        <div class="card login-card p-5 bg-white text-dark">
+            <div class="text-center mb-4">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; font-size: 24px;">
+                    <i class="fas fa-fire"></i>
+                </div>
+                <h3>এডমিন প্যানেল</h3>
+                <p class="text-muted small">এডমিন নিরাপদ লগইন</p>
+            </div>
+            <div class="form-floating mb-3">
+                <input type="email" class="form-control" id="adminEmail" placeholder="name@example.com">
+                <label for="adminEmail">ইমেইল এড্রেস</label>
+            </div>
+            <div class="form-floating mb-3">
+                <input type="password" class="form-control" id="adminPass" placeholder="password">
+                <label for="adminPass">পাসওয়ার্ড</label>
+            </div>
+            <button id="btnLogin" class="btn btn-primary w-100 py-2 fw-bold shadow-sm">প্রবেশ করুন</button>
+            <small class="text-danger text-center mt-3 d-block" id="loginError"></small>
+        </div>
+    </div>
+
+    <div class="sidebar-overlay" id="mobileOverlay" onclick="toggleSidebar()"></div>
+
+    <div class="d-flex-wrapper d-none" id="mainApp">
+        
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-rocket me-2"></i> সাইট মেনু
+            </div>
+            <ul class="components">
+                <li><a href="#" onclick="showPage('dashboard', this)" class="active-link"><i class="fas fa-home me-3"></i>ড্যাশবোর্ড</a></li>
+                <li><a href="#" onclick="showPage('general', this)"><i class="fas fa-sliders-h me-3"></i>হোম কনফিগার</a></li>
+                <li><a href="#" onclick="showPage('userlist', this)"><i class="fas fa-users me-3"></i>ইউজার লিস্ট</a></li>
+                <li><a href="#" onclick="showPage('contactlist', this)"><i class="fas fa-address-book me-3"></i>কন্টাক্ট লিস্ট</a></li>
+                <li><a href="#" onclick="showPage('about', this)"><i class="fas fa-info-circle me-3"></i>আমাদের সম্পর্কে</a></li>
+                <li><a href="#" onclick="showPage('contact', this)"><i class="fas fa-address-card me-3"></i>যোগাযোগ তথ্য</a></li>
+                <li><a href="#" onclick="showPage('updates', this)"><i class="fas fa-bullhorn me-3"></i>নিউজ আপডেট</a></li>
+                <li><a href="#" onclick="showPage('newadmin', this)"><i class="fas fa-user-plus me-3"></i>নিউ এডমিন</a></li>
+                <li><a href="#" onclick="showPage('adminbadge', this)"><i class="fas fa-id-badge me-3"></i>এডমিন ব্যাজ</a></li>
+                <li><a href="#" onclick="showPage('settings', this)"><i class="fas fa-cog me-3"></i>সেটিংস</a></li>
+            </ul>
+            <div class="text-center mt-5">
+                <button id="btnLogout" class="btn btn-danger btn-sm w-75 rounded-pill"><i class="fas fa-sign-out-alt me-2"></i>লগ আউট</button>
+            </div>
+        </nav>
+
+        <div id="content">
+            
+            <nav class="navbar navbar-expand-lg sticky-top">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-primary shadow-sm" onclick="toggleSidebar()">
+                        <i class="fas fa-bars me-1"></i> <span class="d-none d-sm-inline">মেনু</span>
+                    </button>
+                    
+                    <div class="d-flex align-items-center ms-auto">
+                        <button class="btn btn-outline-secondary border-0 me-3" onclick="toggleTheme()" id="themeBtn" title="Change Theme">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        
+                        <div class="dropdown">
+                            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-body" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                                <img src="https://ui-avatars.com/api/?name=Admin&background=4e73df&color=fff" alt="" width="40" height="40" class="rounded-circle me-2 border">
+                                <span class="fw-bold small d-none d-sm-inline" id="displayUsername">Admin</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li><a class="dropdown-item" href="#" onclick="showPage('settings')"><i class="fas fa-user me-2"></i>প্রোফাইল</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="main-content">
+                
+                <div id="dashboard" class="page-section fade-in">
+                    <h4 class="mb-4 text-muted border-bottom pb-2">ড্যাশবোর্ড ওভারভিউ</h4>
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="card stat-card p-4 border-primary bg-body-tertiary">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-muted text-uppercase mb-2">মোট ইউজার</h6>
+                                        <h2 class="mb-0 fw-bold" id="totalUsersCount">0</h2>
+                                    </div>
+                                    <div class="fs-1 text-primary opacity-25"><i class="fas fa-users"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card stat-card p-4 border-success bg-body-tertiary">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-muted text-uppercase mb-2">সর্বমোট নিউজ</h6>
+                                        <h2 class="mb-0 fw-bold" id="totalNewsCount">0</h2>
+                                    </div>
+                                    <div class="fs-1 text-success opacity-25"><i class="fas fa-newspaper"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card stat-card p-4 border-warning bg-body-tertiary">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-muted text-uppercase mb-2">টিম মেম্বার</h6>
+                                        <h2 class="mb-0 fw-bold" id="totalTeamCount">0</h2>
+                                    </div>
+                                    <div class="fs-1 text-warning opacity-25"><i class="fas fa-user-tie"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="general" class="page-section fade-in d-none">
+                    <div class="card p-4">
+                        <h5 class="card-title mb-4 border-bottom pb-2">হোম পেজ ও সাধারণ সেটিংস</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">সাইট নাম (Site Name)</label>
+                                <input type="text" class="form-control" id="siteName">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">সাইট লোগো URL</label>
+                                <input type="text" class="form-control" id="siteLogoUrl">
+                            </div>
+                            
+                            <h6 class="mt-4 text-muted">স্লাইডার ব্যানার</h6>
+                            <div class="col-md-4">
+                                <label class="form-label">ব্যানার ১ URL</label>
+                                <input type="text" class="form-control" id="banner1">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ব্যানার ২ URL</label>
+                                <input type="text" class="form-control" id="banner2">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ব্যানার ৩ URL</label>
+                                <input type="text" class="form-control" id="banner3">
+                            </div>
+
+                            <h6 class="mt-4 text-muted">ব্রেকিং নিউজ টিকার</h6>
+                            <div class="col-12">
+                                <label class="form-label">সংবাদসমূহ (কমা ',' দিয়ে আলাদা করুন)</label>
+                                <textarea class="form-control" id="newsTickerInput" rows="3" placeholder="রক্তদাতারা যোগ দিচ্ছেন..., জরুরি রক্তের প্রয়োজন..."></textarea>
+                            </div>
+
+                            <button id="btnSaveGeneral" class="btn btn-primary mt-3 w-auto ms-auto">সেভ করুন</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="userlist" class="page-section fade-in d-none">
+                    <div class="card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+                            <h5 class="mb-0">রেজিস্টার্ড ইউজার (Firestore)</h5>
+                            <button id="btnRefreshUsers" class="btn btn-sm btn-outline-primary"><i class="fas fa-sync"></i> রিফ্রেশ</button>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text bg-body-tertiary"><i class="fas fa-search"></i></span>
+                                <input type="text" id="userSearchInput" class="form-control" placeholder="ইমেইল অথবা মোবাইল নম্বর দিয়ে খুঁজুন...">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ইমেইল / নাম</th>
+                                        <th>ফোন</th>
+                                        <th>UID</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTableBody">
+                                </tbody>
+                            </table>
+                            <div id="noUsersMsg" class="text-center text-muted py-3 d-none">কোন ইউজার পাওয়া যায়নি</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="contactlist" class="page-section fade-in d-none">
+                    <div class="card p-0 overflow-hidden" style="height: 600px;">
+                        <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <button id="clBackBtn" class="btn btn-sm btn-outline-secondary me-2 d-none" onclick="prevContactStep()">
+                                    <i class="fas fa-arrow-left"></i>
+                                </button>
+                                <h5 class="m-0" id="clTitle">ক্যাটাগরি নির্বাচন করুন</h5>
+                            </div>
+                        </div>
+                        
+                        <div class="cl-slider-container" id="clSlider">
+                            <div class="cl-slide" id="clStep1">
+                                <h6 class="text-muted mb-3">সেবা ক্যাটাগরি</h6>
+                                <div class="list-group list-group-flush" id="clCategoryList">
+                                </div>
+                            </div>
+
+                            <div class="cl-slide" id="clStep2">
+                                <h6 class="text-muted mb-3">বিভাগ নির্বাচন করুন</h6>
+                                <div class="list-group list-group-flush" id="clDivisionList">
+                                </div>
+                            </div>
+
+                            <div class="cl-slide" id="clStep3">
+                                <h6 class="text-muted mb-3">জেলা নির্বাচন করুন</h6>
+                                <div class="list-group list-group-flush" id="clDistrictList">
+                                </div>
+                            </div>
+
+                            <div class="cl-slide" id="clStep4">
+                                <h6 class="text-muted mb-3">উপজেলা নির্বাচন করুন</h6>
+                                <div class="list-group list-group-flush" id="clUpazilaList">
+                                </div>
+                            </div>
+
+                            <div class="cl-slide" id="clStep5">
+                                <div class="alert alert-info py-2 small">
+                                    <i class="fas fa-map-marker-alt me-1"></i> <span id="clSelectedBreadcrumb" class="fw-bold"></span>
+                                </div>
+                                
+                                <div id="clLoading" class="text-center py-4 d-none">
+                                    <div class="spinner-border text-primary spinner-border-sm"></div> লোড হচ্ছে...
+                                </div>
+
+                                <div class="list-group" id="finalContactList" style="padding-bottom: 120px;">
+                                </div>
+
+                                <button class="fab-btn" onclick="openContactModal()" title="নতুন কন্টাক্ট যুক্ত করুন">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="contactModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="contactModalTitle">নতুন কন্টাক্ট যুক্ত করুন</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="contactForm">
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <label class="small text-muted">সেকশন</label>
+                                            <input type="text" id="modalCategory" class="form-control form-control-sm" disabled>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="small text-muted">বিভাগ</label>
+                                            <input type="text" id="modalDivision" class="form-control form-control-sm" disabled>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="small text-muted">জেলা</label>
+                                            <input type="text" id="modalDistrict" class="form-control form-control-sm" disabled>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="small text-muted">উপজেলা</label>
+                                            <input type="text" id="modalUpazila" class="form-control form-control-sm" disabled>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="mb-3">
+                                        <label class="form-label">নাম (অপশনাল)</label>
+                                        <input type="text" class="form-control" id="modalPersonName" placeholder="ব্যক্তির নাম...">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">পদ / প্রতিষ্ঠান নাম</label>
+                                        <input type="text" class="form-control" id="modalOfficeName" placeholder="প্রতিষ্ঠানের নাম..." required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">মোবাইল নম্বর</label>
+                                        <input type="text" class="form-control" id="modalPhone" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">ই-মেল (অপশনাল)</label>
+                                        <input type="email" class="form-control" id="modalEmail" placeholder="example@mail.com">
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">বাতিল</button>
+                                <button type="button" class="btn btn-primary" id="btnSaveContactDB">সেভ করুন</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="updates" class="page-section fade-in d-none">
+                    <div class="card p-4">
+                        <h5 class="mb-4">নিউজ ম্যানেজমেন্ট</h5>
+                        
+                        <div class="card bg-body-tertiary p-3 mb-4">
+                            <h6 class="mb-3 text-muted" id="newsFormTitle">নতুন নিউজ পাবলিশ করুন</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">শিরোনাম</label>
+                                    <input type="text" class="form-control" id="newsTitle">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">তারিখ</label>
+                                    <input type="date" class="form-control" id="newsDate">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">ছবির URL</label>
+                                    <input type="text" class="form-control" id="newsImg">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">বিস্তারিত</label>
+                                    <textarea class="form-control" id="newsDesc" rows="3"></textarea>
+                                </div>
+                                <div class="col-12 text-end">
+                                    <button id="btnCancelEditNews" class="btn btn-secondary d-none me-2">বাতিল</button>
+                                    <button id="btnPublishNews" class="btn btn-primary"><i class="fas fa-paper-plane me-2"></i>পাবলিশ করুন</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="mb-3">প্রকাশিত নিউজ তালিকা</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 15%;">তারিখ</th>
+                                        <th style="width: 25%;">শিরোনাম</th>
+                                        <th style="width: 40%;">বিস্তারিত</th>
+                                        <th style="width: 20%;">অ্যাকশন</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="newsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="newadmin" class="page-section fade-in d-none">
+                    <div class="card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="card-title mb-0">এডমিন আবেদন তালিকা</h5>
+                            <button onclick="loadAdminApplications()" class="btn btn-sm btn-outline-primary"><i class="fas fa-sync"></i> রিফ্রেশ</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>নাম</th>
+                                        <th>মোবাইল / ইমেইল</th>
+                                        <th>ঠিকানা</th>
+                                        <th>পছন্দের জেলা</th>
+                                        <th>আবেদনের তারিখ</th>
+                                        <th>অ্যাকশন</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminApplicationsTableBody">
+                                </tbody>
+                            </table>
+                            <div id="noApplicationsMsg" class="text-center text-muted py-3 d-none">কোন আবেদন পাওয়া যায়নি</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="adminbadge" class="page-section fade-in d-none">
+                    <div class="card p-4">
+                        <h5 class="card-title mb-4 border-bottom pb-2">এডমিন ব্যাজ ম্যানেজমেন্ট</h5>
+                        <p class="text-muted">এই সেকশন থেকে আপনি অনুমোদিত এডমিনদের জন্য ব্যাজ তৈরি বা পরিচালনা করতে পারবেন।</p>
+                        <div class="row">
+                            <div class="col-md-5">
+                                <div class="card bg-body-tertiary p-3">
+                                    <h6 class="text-muted mb-3">ব্যাজ তৈরি করুন</h6>
+                                    <div class="mb-3">
+                                        <label for="badgeName" class="form-label">এডমিনের নাম</label>
+                                        <input type="text" class="form-control" id="badgeName" placeholder="e.g., John Doe">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="badgeDistrict" class="form-label">দায়িত্বপ্রাপ্ত জেলা</label>
+                                        <input type="text" class="form-control" id="badgeDistrict" placeholder="e.g., Dhaka">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="badgePhotoUrl" class="form-label">ছবির URL (অপশনাল)</label>
+                                        <input type="text" class="form-control" id="badgePhotoUrl" placeholder="https://example.com/photo.jpg">
+                                    </div>
+                                    <button class="btn btn-primary">ব্যাজ দেখুন</button>
+                                </div>
+                            </div>
+                            <div class="col-md-7">
+                                <h6 class="text-muted mb-3">প্রিভিউ</h6>
+                                <div class="card">
+                                    <div class="card-body text-center p-4">
+                                        <img src="https://ui-avatars.com/api/?name=Admin&background=4e73df&color=fff&size=90" class="rounded-circle mb-3 border" alt="Admin Badge Photo">
+                                        <h5 class="card-title mb-1">এডমিনের নাম</h5>
+                                        <p class="text-muted mb-2">জেলা: <span class="badge bg-success">জেলা</span></p>
+                                        <hr>
+                                        <p class="small text-muted mb-0">অনুমোদিত সেকেন্ডারি এডমিন</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="settings" class="page-section fade-in d-none">
+                    <div class="card p-4" style="max-width: 500px; margin: 0 auto;">
+                        <h5 class="mb-4 text-primary"><i class="fas fa-user-shield me-2"></i>পাসওয়ার্ড পরিবর্তন</h5>
+                        <div class="alert alert-info small">বর্তমানে লগইন করা: <span id="currentEmailDisplay"></span></div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">নতুন পাসওয়ার্ড</label>
+                            <input type="password" class="form-control" id="newFirebasePass">
+                            <small class="form-text text-muted">নিরাপত্তার জন্য আপনার বর্তমান বা নতুন পাসওয়ার্ড এখানে দেখানো হবে না।</small>
+                        </div>
+                        <button id="btnUpdatePass" class="btn btn-warning w-100 fw-bold">পাসওয়ার্ড আপডেট করুন</button>
+                    </div>
+
+                    <div class="card p-4 mt-4" style="max-width: 500px; margin: 0 auto;">
+                        <h5 class="mb-4 text-success"><i class="fas fa-key me-2"></i>সার্চ পেজ পাস-কী</h5>
+                        <div class="mb-3">
+                            <label class="form-label">নতুন পাস-কী (৬ ডিজিট)</label>
+                            <input type="text" class="form-control" id="newPassKey" placeholder="123456" maxlength="6">
+                            <small class="form-text text-muted">বর্তমান কী: <span id="currentPassKeyDisplay" class="fw-bold">লোড হচ্ছে...</span></small>
+                        </div>
+                        <button id="btnUpdatePassKey" class="btn btn-success w-100 fw-bold">পাস-কী আপডেট করুন</button>
+                    </div>
+                    
+                    <div class="card p-4 mt-4" style="max-width: 500px; margin: 0 auto;">
+                        <h5 class="mb-4 text-danger"><i class="fas fa-user-lock me-2"></i>Secondary Admin Security Key</h5>
+                        <div class="alert alert-warning small">এই কী '2nd-admin.html' ফাইলে প্রবেশের জন্য ব্যবহৃত হয়।</div>
+                        <div class="mb-3">
+                            <label class="form-label">নতুন সিকিউরিটি কী (৮ সংখ্যা)</label>
+                            <input type="text" class="form-control" id="newSecurityKey" placeholder="87654321" maxlength="8">
+                            <small class="form-text text-muted">বর্তমান কী: <span id="currentSecurityKeyDisplay" class="fw-bold">লোড হচ্ছে...</span></small>
+                        </div>
+                        <button id="btnUpdateSecurityKey" class="btn btn-danger w-100 fw-bold">সিকিউরিটি কী আপডেট করুন</button>
+                    </div>
+                </div>
+
+                <div id="about" class="page-section fade-in d-none">
+                    <div class="row">
+                        <div class="col-lg-7">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card p-4 h-100">
+                                        <h5 class="mb-3" id="teamFormTitle">টিম মেম্বার যুক্ত করুন</h5>
+                                        <div class="card bg-body-tertiary p-2 mb-3">
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6"><input type="text" class="form-control form-control-sm" id="teamName" placeholder="নাম"></div>
+                                                <div class="col-6"><input type="text" class="form-control form-control-sm" id="teamRole" placeholder="পদবী"></div>
+                                                <div class="col-12"><input type="text" class="form-control form-control-sm" id="teamContact" placeholder="যোগাযোগ লিঙ্ক (Facebook/Phone)"></div>
+                                                
+                                                <div class="col-12"><input type="text" class="form-control form-control-sm" id="teamImg" placeholder="ছবির URL"></div>
+                                                <div class="col-12"><textarea class="form-control form-control-sm" id="teamBio" placeholder="সংক্ষিপ্ত বর্ণনা" rows="2"></textarea></div>
+                                                <div class="col-12 text-end">
+                                                    <button id="btnCancelEditTeam" class="btn btn-sm btn-secondary d-none me-1">বাতিল</button>
+                                                    <button id="btnAddTeam" class="btn btn-sm btn-success">যুক্ত করুন</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <h6 class="text-muted">টিম লিস্ট</h6>
+                                        <ul class="list-group list-group-flush" id="teamList">
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-5">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card p-4">
+                                        <h5 class="mb-3" id="partnerFormTitle">পার্টনার লোগো</h5>
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm mb-2" id="partnerLogoUrl" placeholder="লোগো URL">
+                                            <input type="text" class="form-control form-control-sm" id="partnerLinkUrl" placeholder="লিঙ্ক URL (website/page)">
+                                        </div>
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button class="btn btn-sm btn-secondary d-none" type="button" id="btnCancelEditPartner">বাতিল</button>
+                                            <button class="btn btn-sm btn-success" type="button" id="btnAddPartner">যুক্ত করুন</button>
+                                        </div>
+                                        <hr>
+                                        <h6 class="text-muted">পার্টনার লিস্ট</h6>
+                                        <div class="d-flex flex-wrap gap-2" id="partnerList">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="card p-4">
+                                        <h5 class="mb-3">পেজ সেটিংস</h5>
+                                        <div class="form-check form-switch">
+                                          <input class="form-check-input" type="checkbox" role="switch" id="showAdminApplicationToggle">
+                                          <label class="form-check-label" for="showAdminApplicationToggle">"Apply to be an admin" বাটন দেখান</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="contact" class="page-section fade-in d-none">
+                    <div class="card p-4">
+                        <h5 class="mb-4">যোগাযোগের তথ্য আপডেট করুন</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">মোবাইল নম্বর</label>
+                                <input type="text" class="form-control" id="contactPhone">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ইমেইল</label>
+                                <input type="text" class="form-control" id="contactEmail">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">ঠিকানা</label>
+                                <input type="text" class="form-control" id="contactAddress">
+                            </div>
+                            <div class="col-12 text-end">
+                                <button id="btnSaveContact" class="btn btn-primary">সেভ করুন</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBnKQr2k2ZWnPlEZiJtMDewv6z3Z7p3kiU",
+            authDomain: "pacheacchi.firebaseapp.com",
+            projectId: "pacheacchi",
+            storageBucket: "pacheacchi.firebasestorage.app",
+            messagingSenderId: "679996219070",
+            appId: "1:679996219070:web:871b64fb4a5be296eac8ef",
+            measurementId: "G-M34YKMYHQ8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const loginSection = document.getElementById('loginSection');
+        const mainApp = document.getElementById('mainApp');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        let editingNewsId = null;
+        let editingTeamId = null;
+        let editingPartnerId = null;
+        
+        let editingContactDBId = null;
+        let currentCLState = { category: '', division: '', district: '', upazila: '' };
+        let contactModal = null;
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                showApp(user);
+            } else {
+                showLogin();
+            }
+        });
+
+        document.getElementById('btnLogin').addEventListener('click', async () => {
+            const email = document.getElementById('adminEmail').value;
+            const pass = document.getElementById('adminPass').value;
+            const errorMsg = document.getElementById('loginError');
+
+            if(!email || !pass) {
+                errorMsg.innerText = "দয়া করে ইমেইল এবং পাসওয়ার্ড দিন";
+                return;
+            }
+
+            loadingSpinner.style.display = 'block';
+            errorMsg.innerText = '';
+
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (error) {
+                console.error(error);
+                errorMsg.innerText = "ভুল তথ্য! অথবা পারমিশন নেই।";
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                alert("লগ আউট সফল হয়েছে!");
+            }).catch((error) => {
+                console.error(error);
+            });
+        });
+
+        function showLogin() {
+            loginSection.classList.remove('d-none');
+            mainApp.classList.add('d-none');
+            mainApp.classList.remove('d-flex-wrapper');
+        }
+
+        function showApp(user) {
+            loginSection.classList.add('d-none');
+            mainApp.classList.remove('d-none');
+            mainApp.classList.add('d-flex-wrapper');
+            
+            document.getElementById('displayUsername').innerText = user.email.split('@')[0];
+            document.getElementById('currentEmailDisplay').innerText = user.email;
+
+            loadDashboardData();
+            loadGeneralSettings();
+            
+            contactModal = new bootstrap.Modal(document.getElementById('contactModal'));
+        }
+
+        async function loadDashboardData() {
+            try {
+                const usersSnap = await getDocs(collection(db, "users"));
+                document.getElementById('totalUsersCount').innerText = usersSnap.size;
+
+                const newsSnap = await getDocs(collection(db, "news"));
+                document.getElementById('totalNewsCount').innerText = newsSnap.size;
+                
+                const teamSnap = await getDocs(collection(db, "team_members"));
+                document.getElementById('totalTeamCount').innerText = teamSnap.size;
+
+            } catch (e) {
+                console.log("Data load error: ", e);
+            }
+        }
+
+        async function loadGeneralSettings() {
+            try {
+                const docRef = doc(db, "settings", "siteConfig");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('siteName').value = data.siteName || '';
+                    document.getElementById('siteLogoUrl').value = data.logoUrl || '';
+                    if (data.banners && Array.isArray(data.banners)) {
+                        document.getElementById('banner1').value = data.banners[0] || '';
+                        document.getElementById('banner2').value = data.banners[1] || '';
+                        document.getElementById('banner3').value = data.banners[2] || '';
+                    }
+                    if (data.newsTicker && Array.isArray(data.newsTicker)) {
+                        document.getElementById('newsTickerInput').value = data.newsTicker.join(', ');
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        document.getElementById('btnSaveGeneral').addEventListener('click', async () => {
+            const name = document.getElementById('siteName').value;
+            const logo = document.getElementById('siteLogoUrl').value;
+            const b1 = document.getElementById('banner1').value;
+            const b2 = document.getElementById('banner2').value;
+            const b3 = document.getElementById('banner3').value;
+            const tickerRaw = document.getElementById('newsTickerInput').value;
+            
+            const tickerArray = tickerRaw.split(',').map(item => item.trim()).filter(item => item);
+
+            try {
+                await setDoc(doc(db, "settings", "siteConfig"), {
+                    siteName: name,
+                    logoUrl: logo,
+                    banners: [b1, b2, b3],
+                    newsTicker: tickerArray,
+                    updatedAt: new Date()
+                }, { merge: true });
+                alert("সেটিংস সেভ হয়েছে!");
+            } catch (e) {
+                alert("এরর: " + e.message);
+            }
+        });
+        
+        async function loadNewsList() {
+            const tbody = document.getElementById('newsTableBody');
+            tbody.innerHTML = '';
+            try {
+                const snap = await getDocs(collection(db, "news"));
+                if(snap.empty) {
+                     tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">কোন নিউজ পাওয়া যায়নি</td></tr>';
+                     return;
+                }
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const tr = document.createElement('tr');
+                    const dataStr = encodeURIComponent(JSON.stringify(d));
+                    
+                    tr.innerHTML = `
+                        <td>${d.date || '-'}</td>
+                        <td>${d.title}</td>
+                        <td><small>${d.content ? d.content.substring(0, 50) + '...' : ''}</small></td>
+                        <td>
+                            <span class="badge bg-warning text-dark action-btn" onclick="editNews('${doc.id}', '${dataStr}')"><i class="fas fa-edit"></i></span>
+                            <span class="badge bg-danger action-btn" onclick="deleteDocById('news', '${doc.id}')"><i class="fas fa-trash"></i></span>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        document.getElementById('btnPublishNews').addEventListener('click', async () => {
+            const title = document.getElementById('newsTitle').value;
+            const date = document.getElementById('newsDate').value;
+            const img = document.getElementById('newsImg').value;
+            const desc = document.getElementById('newsDesc').value;
+
+            if(!title) return alert("শিরোনাম দিন!");
+
+            try {
+                if(editingNewsId) {
+                    await updateDoc(doc(db, "news", editingNewsId), {
+                        title: title, date: date, imageUrl: img, content: desc, updatedAt: new Date()
+                    });
+                    alert("নিউজ আপডেট হয়েছে!");
+                    resetNewsForm();
+                } else {
+                    await addDoc(collection(db, "news"), {
+                        title: title, date: date, imageUrl: img, content: desc, createdAt: new Date()
+                    });
+                    alert("নিউজ পাবলিশ হয়েছে!");
+                    document.getElementById('newsTitle').value = "";
+                    document.getElementById('newsDate').value = "";
+                    document.getElementById('newsImg').value = "";
+                    document.getElementById('newsDesc').value = "";
+                }
+                loadNewsList();
+            } catch (e) {
+                alert("এরর: " + e.message);
+            }
+        });
+
+        window.editNews = (id, dataStr) => {
+            const data = JSON.parse(decodeURIComponent(dataStr));
+            editingNewsId = id;
+            document.getElementById('newsTitle').value = data.title || '';
+            document.getElementById('newsDate').value = data.date || '';
+            document.getElementById('newsImg').value = data.imageUrl || '';
+            document.getElementById('newsDesc').value = data.content || '';
+            
+            document.getElementById('newsFormTitle').innerText = "নিউজ আপডেট করুন";
+            document.getElementById('btnPublishNews').innerText = "আপডেট করুন";
+            document.getElementById('btnPublishNews').classList.replace('btn-primary', 'btn-warning');
+            document.getElementById('btnCancelEditNews').classList.remove('d-none');
+            window.scrollTo(0, 0);
+        };
+
+        document.getElementById('btnCancelEditNews').addEventListener('click', resetNewsForm);
+
+        function resetNewsForm() {
+            editingNewsId = null;
+            document.getElementById('newsTitle').value = "";
+            document.getElementById('newsDate').value = "";
+            document.getElementById('newsImg').value = "";
+            document.getElementById('newsDesc').value = "";
+            
+            document.getElementById('newsFormTitle').innerText = "নতুন নিউজ পাবলিশ করুন";
+            document.getElementById('btnPublishNews').innerHTML = '<i class="fas fa-paper-plane me-2"></i>পাবলিশ করুন';
+            document.getElementById('btnPublishNews').classList.replace('btn-warning', 'btn-primary');
+            document.getElementById('btnCancelEditNews').classList.add('d-none');
+        }
+
+        async function loadUserList() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            try {
+                const querySnapshot = await getDocs(collection(db, "users"));
+                if(querySnapshot.empty) {
+                    document.getElementById('noUsersMsg').classList.remove('d-none');
+                    return;
+                }
+                document.getElementById('noUsersMsg').classList.add('d-none');
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const row = `
+                        <tr>
+                            <td>${data.email || data.name || 'Unknown'}</td>
+                            <td>${data.mobile || data.phone || 'N/A'}</td>
+                            <td><span class="badge bg-secondary">${doc.id.substring(0,8)}...</span></td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-danger text-center">ডাটা লোড করা যায়নি (Firestore Rules চেক করুন)</td></tr>`;
+            }
+        }
+        
+        document.getElementById('userSearchInput').addEventListener('keyup', function() {
+            const filter = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#usersTableBody tr');
+            
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                if(text.includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        document.getElementById('btnRefreshUsers').addEventListener('click', loadUserList);
+        window.loadUserListRef = loadUserList; 
+
+        document.getElementById('btnUpdatePass').addEventListener('click', () => {
+            const user = auth.currentUser;
+            const newPassword = document.getElementById('newFirebasePass').value;
+
+            if (user && newPassword) {
+                updatePassword(user, newPassword).then(() => {
+                    alert("পাসওয়ার্ড পরিবর্তন সফল হয়েছে!");
+                    document.getElementById('newFirebasePass').value = '';
+                }).catch((error) => {
+                    alert("এরর: " + error.message);
+                });
+            } else {
+                alert("নতুন পাসওয়ার্ড লিখুন।");
+            }
+        });
+
+        const teamList = document.getElementById('teamList');
+        
+        async function loadTeamMembers() {
+            teamList.innerHTML = '';
+            const snap = await getDocs(collection(db, "team_members"));
+            snap.forEach(doc => {
+                const d = doc.data();
+                const dataStr = encodeURIComponent(JSON.stringify(d));
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <img src="${d.image || 'https://via.placeholder.com/40'}" class="list-item-img me-3">
+                        <div>
+                            <strong>${d.name}</strong><br>
+                            <small class="text-muted">${d.role}</small>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="editTeam('${doc.id}', '${dataStr}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteDocById('team_members', '${doc.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                teamList.appendChild(li);
+            });
+        }
+
+        document.getElementById('btnAddTeam').addEventListener('click', async () => {
+            const name = document.getElementById('teamName').value;
+            const role = document.getElementById('teamRole').value;
+            const img = document.getElementById('teamImg').value;
+            const bio = document.getElementById('teamBio').value;
+            const contact = document.getElementById('teamContact').value;
+            
+            if(!name) return alert("নাম দিন");
+
+            try {
+                if(editingTeamId) {
+                    await updateDoc(doc(db, "team_members", editingTeamId), { name, role, image: img, bio, contact });
+                    alert("আপডেট হয়েছে!");
+                    resetTeamForm();
+                } else {
+                    await addDoc(collection(db, "team_members"), { name, role, image: img, bio, contact });
+                    alert("যুক্ত হয়েছে!");
+                    document.getElementById('teamName').value = '';
+                    document.getElementById('teamRole').value = '';
+                    document.getElementById('teamImg').value = '';
+                    document.getElementById('teamBio').value = '';
+                    document.getElementById('teamContact').value = '';
+                }
+                loadTeamMembers();
+            } catch(e) { alert(e.message); }
+        });
+
+        window.editTeam = (id, dataStr) => {
+            const data = JSON.parse(decodeURIComponent(dataStr));
+            editingTeamId = id;
+            document.getElementById('teamName').value = data.name || '';
+            document.getElementById('teamRole').value = data.role || '';
+            document.getElementById('teamImg').value = data.image || '';
+            document.getElementById('teamBio').value = data.bio || '';
+            document.getElementById('teamContact').value = data.contact || '';
+
+            document.getElementById('teamFormTitle').innerText = "মেম্বার আপডেট করুন";
+            document.getElementById('btnAddTeam').innerText = "আপডেট";
+            document.getElementById('btnAddTeam').classList.replace('btn-success', 'btn-warning');
+            document.getElementById('btnCancelEditTeam').classList.remove('d-none');
+        };
+
+        document.getElementById('btnCancelEditTeam').addEventListener('click', resetTeamForm);
+
+        function resetTeamForm() {
+            editingTeamId = null;
+            document.getElementById('teamName').value = '';
+            document.getElementById('teamRole').value = '';
+            document.getElementById('teamImg').value = '';
+            document.getElementById('teamBio').value = '';
+            document.getElementById('teamContact').value = '';
+            document.getElementById('teamFormTitle').innerText = "টিম মেম্বার যুক্ত করুন";
+            document.getElementById('btnAddTeam').innerText = "যুক্ত করুন";
+            document.getElementById('btnAddTeam').classList.replace('btn-warning', 'btn-success');
+            document.getElementById('btnCancelEditTeam').classList.add('d-none');
+        }
+
+        const partnerList = document.getElementById('partnerList');
+        
+        async function loadPartners() {
+            partnerList.innerHTML = '';
+            const snap = await getDocs(collection(db, "partners"));
+            snap.forEach(doc => {
+                const d = doc.data();
+                const dataStr = encodeURIComponent(JSON.stringify(d));
+                const div = document.createElement('div');
+                div.className = 'position-relative d-inline-block border p-1 rounded';
+                div.innerHTML = `
+                    <img src="${d.imageUrl}" style="height: 40px; cursor:pointer;" onclick="editPartner('${doc.id}', '${dataStr}')" title="এডিট করতে ক্লিক করুন">
+                    <button class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border-0" onclick="deleteDocById('partners', '${doc.id}')">x</button>
+                `;
+                partnerList.appendChild(div);
+            });
+        }
+
+        document.getElementById('btnAddPartner').addEventListener('click', async () => {
+            const url = document.getElementById('partnerLogoUrl').value;
+            const linkUrl = document.getElementById('partnerLinkUrl').value;
+
+            if(!url) return alert("লোগো URL দিন");
+
+            try {
+                if(editingPartnerId) {
+                    await updateDoc(doc(db, "partners", editingPartnerId), { imageUrl: url, linkUrl: linkUrl });
+                    alert("আপডেট হয়েছে!");
+                    resetPartnerForm();
+                } else {
+                    await addDoc(collection(db, "partners"), { imageUrl: url, linkUrl: linkUrl });
+                    alert("যুক্ত হয়েছে!");
+                    document.getElementById('partnerLogoUrl').value = '';
+                    document.getElementById('partnerLinkUrl').value = '';
+                }
+                loadPartners();
+            } catch(e) { alert(e.message); }
+        });
+
+        window.editPartner = (id, dataStr) => {
+            const data = JSON.parse(decodeURIComponent(dataStr));
+            editingPartnerId = id;
+            document.getElementById('partnerLogoUrl').value = data.imageUrl || '';
+            document.getElementById('partnerLinkUrl').value = data.linkUrl || '';
+            
+            document.getElementById('partnerFormTitle').innerText = "লোগো আপডেট করুন";
+            document.getElementById('btnAddPartner').innerText = "আপডেট";
+            document.getElementById('btnAddPartner').classList.replace('btn-success', 'btn-warning');
+            document.getElementById('btnCancelEditPartner').classList.remove('d-none');
+        };
+
+        document.getElementById('btnCancelEditPartner').addEventListener('click', resetPartnerForm);
+
+        function resetPartnerForm() {
+            editingPartnerId = null;
+            document.getElementById('partnerLogoUrl').value = '';
+            document.getElementById('partnerLinkUrl').value = '';
+            document.getElementById('partnerFormTitle').innerText = "পার্টনার লোগো যুক্ত করুন";
+            document.getElementById('btnAddPartner').innerText = "যুক্ত করুন";
+            document.getElementById('btnAddPartner').classList.replace('btn-warning', 'btn-success');
+            document.getElementById('btnCancelEditPartner').classList.add('d-none');
+        }
+
+        async function loadContactInfo() {
+            try {
+                const docSnap = await getDoc(doc(db, "settings", "contact"));
+                if (docSnap.exists()) {
+                    const d = docSnap.data();
+                    document.getElementById('contactPhone').value = d.phone || '';
+                    document.getElementById('contactEmail').value = d.email || '';
+                    document.getElementById('contactAddress').value = d.address || '';
+                }
+            } catch (e) { console.log(e); }
+        }
+
+        document.getElementById('btnSaveContact').addEventListener('click', async () => {
+            const phone = document.getElementById('contactPhone').value;
+            const email = document.getElementById('contactEmail').value;
+            const address = document.getElementById('contactAddress').value;
+            
+            await setDoc(doc(db, "settings", "contact"), { phone, email, address }, { merge: true });
+            alert("সেভ হয়েছে!");
+        });
+        
+        window.loadContactListDB = async (category, division, district, upazila) => {
+            const listContainer = document.getElementById('finalContactList');
+            const loader = document.getElementById('clLoading');
+            
+            listContainer.innerHTML = '';
+            loader.classList.remove('d-none');
+
+            currentCLState = { category, division, district, upazila };
+
+            try {
+                const q = query(
+                    collection(db, "contacts"),
+                    where("category", "==", category),
+                    where("division", "==", division),
+                    where("district", "==", district),
+                    where("upazila", "==", upazila)
+                );
+
+                const querySnapshot = await getDocs(q);
+                
+                loader.classList.add('d-none');
+
+                if(querySnapshot.empty) {
+                    listContainer.innerHTML = '<div class="text-center text-muted py-4">এই লোকেশনে কোন ডাটা পাওয়া যায়নি।</div>';
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const d = doc.data();
+                    const dataStr = encodeURIComponent(JSON.stringify(d));
+                    
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center mb-2 shadow-sm border rounded';
+                    
+                    const cleanDetails = d.details ? d.details.replace(' | ', ', ') : '';
+
+                    item.innerHTML = `
+                        <div>
+                            <h6 class="mb-1 fw-bold">${d.name}</h6>
+                            <div class="small text-muted"><i class="fas fa-phone-alt me-1"></i> ${d.phone}</div>
+                            ${cleanDetails ? `<div class="small text-muted"><i class="fas fa-info-circle me-1"></i> ${cleanDetails}</div>` : ''}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-warning" onclick="editContactDB('${doc.id}', '${dataStr}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteContactDB('${doc.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+
+            } catch(e) {
+                loader.classList.add('d-none');
+                listContainer.innerHTML = `<div class="alert alert-danger">ডাটা লোড করতে সমস্যা: ${e.message}</div>`;
+                console.error(e);
+            }
+        };
+
+        document.getElementById('btnSaveContactDB').addEventListener('click', async () => {
+            const oName = document.getElementById('modalOfficeName').value;
+            const pName = document.getElementById('modalPersonName').value;
+            const mob = document.getElementById('modalPhone').value;
+            const mail = document.getElementById('modalEmail').value;
+
+            if(!oName || !mob) return alert("প্রতিষ্ঠান নাম এবং ফোন নম্বর আবশ্যক");
+
+            let detailsParts = [];
+            if(pName) detailsParts.push(pName);
+            if(mail) detailsParts.push(mail);
+            const detailsStr = detailsParts.join(" | ");
+
+            const dataPayload = {
+                name: oName,
+                phone: mob,
+                details: detailsStr,
+                category: currentCLState.category,
+                division: currentCLState.division,
+                district: currentCLState.district,
+                upazila: currentCLState.upazila,
+                updatedAt: new Date()
+            };
+
+            try {
+                if(editingContactDBId) {
+                    await updateDoc(doc(db, "contacts", editingContactDBId), dataPayload);
+                    alert("আপডেট সফল হয়েছে!");
+                } else {
+                    dataPayload.createdAt = new Date();
+                    dataPayload.source = "admin_panel";
+                    await addDoc(collection(db, "contacts"), dataPayload);
+                    alert("যুক্ত সফল হয়েছে!");
+                }
+                
+                contactModal.hide();
+                resetContactModal();
+                window.loadContactListDB(currentCLState.category, currentCLState.division, currentCLState.district, currentCLState.upazila);
+
+            } catch(e) {
+                alert("এরর: " + e.message);
+            }
+        });
+
+        window.editContactDB = (id, dataStr) => {
+            const data = JSON.parse(decodeURIComponent(dataStr));
+            editingContactDBId = id;
+            
+            document.getElementById('modalCategory').value = data.category || '';
+            document.getElementById('modalDivision').value = data.division || '';
+            document.getElementById('modalDistrict').value = data.district || '';
+            document.getElementById('modalUpazila').value = data.upazila || '';
+
+            document.getElementById('modalOfficeName').value = data.name || '';
+            document.getElementById('modalPhone').value = data.phone || '';
+            
+            let pName = "";
+            let email = "";
+            if(data.details) {
+                const parts = data.details.split(" | ");
+                if(parts.length > 0) pName = parts[0];
+                if(parts.length > 1) email = parts[1];
+                if(pName.includes('@') && !email) { email = pName; pName = ""; } 
+            }
+            document.getElementById('modalPersonName').value = pName;
+            document.getElementById('modalEmail').value = email;
+            
+            document.getElementById('contactModalTitle').innerText = "কন্টাক্ট এডিট করুন";
+            document.getElementById('btnSaveContactDB').innerText = "আপডেট";
+            contactModal.show();
+        };
+
+        window.deleteContactDB = async (id) => {
+            if(confirm("আপনি কি নিশ্চিত এই কন্টাক্টটি মুছে ফেলতে চান?")) {
+                try {
+                    await deleteDoc(doc(db, "contacts", id));
+                    window.loadContactListDB(currentCLState.category, currentCLState.division, currentCLState.district, currentCLState.upazila);
+                } catch(e) {
+                    alert("এরর: " + e.message);
+                }
+            }
+        };
+
+        window.openContactModal = () => {
+            resetContactModal();
+            document.getElementById('modalCategory').value = currentCLState.category;
+            document.getElementById('modalDivision').value = currentCLState.division;
+            document.getElementById('modalDistrict').value = currentCLState.district;
+            document.getElementById('modalUpazila').value = currentCLState.upazila;
+            
+            contactModal.show();
+        };
+
+        function resetContactModal() {
+            editingContactDBId = null;
+            document.getElementById('contactForm').reset();
+            document.getElementById('contactModalTitle').innerText = "নতুন কন্টাক্ট যুক্ত করুন";
+            document.getElementById('btnSaveContactDB').innerText = "সেভ করুন";
+        }
+
+        document.getElementById('btnUpdatePassKey').addEventListener('click', async () => {
+            const pk = document.getElementById('newPassKey').value;
+            if(pk.length < 4) return alert("মিনিমাম ৪ ডিজিট দিন");
+            try {
+                await setDoc(doc(db, "settings", "admin"), { passKey: pk }, { merge: true });
+                alert("পাস-কী সফলভাবে আপডেট হয়েছে!");
+                document.getElementById('currentPassKeyDisplay').innerText = pk;
+                document.getElementById('newPassKey').value = '';
+            } catch(e) {
+                alert("এরর: " + e.message);
+            }
+        });
+        
+        document.getElementById('btnUpdateSecurityKey').addEventListener('click', async () => {
+            const newKey = document.getElementById('newSecurityKey').value;
+            if (!/^\d{8}$/.test(newKey)) {
+                return alert("সিকিউরিটি কী অবশ্যই ৮ সংখ্যার হতে হবে।");
+            }
+            try {
+                await setDoc(doc(db, "settings", "security"), { key: newKey }, { merge: true });
+                alert("সিকিউরিটি কী সফলভাবে আপডেট হয়েছে!");
+                document.getElementById('currentSecurityKeyDisplay').innerText = newKey;
+                document.getElementById('newSecurityKey').value = '';
+            } catch (e) {
+                alert("এরর: " + e.message + "\n\nFirestore Rules চেক করুন। আপনার UID কি সঠিকভাবে সেট করা আছে?");
+            }
+        });
+
+        async function loadSecurityKey() {
+            try {
+                const docSnap = await getDoc(doc(db, "settings", "security"));
+                if (docSnap.exists() && docSnap.data().key) {
+                    document.getElementById('currentSecurityKeyDisplay').innerText = docSnap.data().key;
+                } else {
+                    document.getElementById('currentSecurityKeyDisplay').innerText = 'এখনো সেট করা হয়নি';
+                }
+            } catch (e) {
+                document.getElementById('currentSecurityKeyDisplay').innerText = 'লোড করা যায়নি';
+                console.error("Error fetching security key:", e);
+            }
+        }
+        
+        async function loadSettingsData() {
+            try {
+                const docSnap = await getDoc(doc(db, "settings", "admin"));
+                if (docSnap.exists() && docSnap.data().passKey) {
+                    document.getElementById('currentPassKeyDisplay').innerText = docSnap.data().passKey;
+                } else {
+                    document.getElementById('currentPassKeyDisplay').innerText = 'এখনো সেট করা হয়নি';
+                }
+            } catch(e) {
+                document.getElementById('currentPassKeyDisplay').innerText = 'লোড করা যায়নি';
+                console.error("Error fetching passkey:", e);
+            }
+            await loadSecurityKey();
+        }
+
+        const adminAppToggle = document.getElementById('showAdminApplicationToggle');
+
+        async function loadAboutPageSettings() {
+            try {
+                const docRef = doc(db, "settings", "siteConfig");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().showAdminApplicationButton === true) {
+                    adminAppToggle.checked = true;
+                } else {
+                    adminAppToggle.checked = false;
+                }
+            } catch (e) {
+                console.error("Error loading About Page settings:", e);
+                adminAppToggle.checked = false;
+            }
+        }
+        
+        adminAppToggle.addEventListener('change', async (event) => {
+            try {
+                await setDoc(doc(db, "settings", "siteConfig"), { 
+                    showAdminApplicationButton: event.target.checked 
+                }, { merge: true });
+                alert("সেটিংস সেভ হয়েছে!");
+            } catch (e) {
+                alert("এরর: " + e.message);
+            }
+        });
+
+        async function loadAdminApplications() {
+            const tbody = document.getElementById('adminApplicationsTableBody');
+            const noDataMsg = document.getElementById('noApplicationsMsg');
+            tbody.innerHTML = '';
+            noDataMsg.classList.add('d-none');
+
+            try {
+                const snap = await getDocs(collection(db, "adminApplications"));
+                if (snap.empty) {
+                    noDataMsg.classList.remove('d-none');
+                    return;
+                }
+
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const appliedDate = d.appliedAt && d.appliedAt.toDate ? d.appliedAt.toDate().toLocaleDateString('bn-BD') : 'N/A';
+                    const fullAddress = d.address ? `${d.address.village}, ${d.address.upazila}, ${d.address.district}` : 'N/A';
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${d.name || 'N/A'}</td>
+                        <td>
+                            <div class="small">${d.mobile || 'N/A'}</div>
+                            <div class="small text-muted">${d.email || 'N/A'}</div>
+                        </td>
+                        <td><small>${fullAddress}</small></td>
+                        <td><span class="badge bg-info text-dark">${d.preferredDistrict || 'N/A'}</span></td>
+                        <td>${appliedDate}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteDocById('adminApplications', '${doc.id}')" title="ডিলিট করুন">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error("Error loading admin applications: ", e);
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">ডাটা লোড করতে সমস্যা হয়েছে।</td></tr>';
+            }
+        }
+
+        window.deleteDocById = async (collectionName, docId) => {
+            if(confirm("মুছে ফেলতে চান?")) {
+                await deleteDoc(doc(db, collectionName, docId));
+                if(collectionName === 'team_members') loadTeamMembers();
+                if(collectionName === 'partners') loadPartners();
+                if(collectionName === 'news') loadNewsList();
+                if(collectionName === 'adminApplications') loadAdminApplications();
+            }
+        };
+
+        window.loadAboutData = () => { loadTeamMembers(); loadPartners(); loadAboutPageSettings(); };
+        window.loadContactData = loadContactInfo;
+        window.loadNewsData = loadNewsList;
+        window.loadSettingsData = loadSettingsData;
+        window.loadAdminApplications = loadAdminApplications;
+        window.loadAdminBadgeData = () => {};
+
+    </script>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.toggle('active');
+            
+            if(sidebar.classList.contains('active')) {
+                overlay.classList.add('show');
+            } else {
+                overlay.classList.remove('show');
+            }
+        }
+
+        function showPage(pageId, element) {
+            document.querySelectorAll('.page-section').forEach(el => el.classList.add('d-none'));
+            
+            const target = document.getElementById(pageId);
+            target.classList.remove('d-none');
+            target.classList.remove('fade-in');
+            void target.offsetWidth;
+            target.classList.add('fade-in');
+
+            if(element) {
+                document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active-link'));
+                element.classList.add('active-link');
+                toggleSidebar();
+            }
+
+            if(pageId === 'userlist' && window.loadUserListRef) window.loadUserListRef();
+            if(pageId === 'about' && window.loadAboutData) window.loadAboutData();
+            if(pageId === 'contact' && window.loadContactData) window.loadContactData();
+            if(pageId === 'updates' && window.loadNewsData) window.loadNewsData();
+            if(pageId === 'settings' && window.loadSettingsData) window.loadSettingsData();
+            if(pageId === 'contactlist') initContactList();
+            if(pageId === 'newadmin' && window.loadAdminApplications) window.loadAdminApplications();
+            if(pageId === 'adminbadge' && window.loadAdminBadgeData) window.loadAdminBadgeData();
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeBtn');
+            const icon = btn.querySelector('i');
+
+            if (html.getAttribute('data-bs-theme') === 'light') {
+                html.setAttribute('data-bs-theme', 'dark');
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+                btn.classList.replace('btn-outline-secondary', 'btn-outline-warning');
+            } else {
+                html.setAttribute('data-bs-theme', 'light');
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+                btn.classList.replace('btn-outline-warning', 'btn-outline-secondary');
+            }
+        }
+        
+        const bdGeoData = {
+            "Dhaka": {
+                "Dhaka": ["Savar", "Dhamrai", "Keraniganj", "Nawabganj", "Dohar", "Hazaribagh", "Ramna", "Tejgaon", "Gulshan", "Mirpur", "Pallabi", "Kafrul", "Cantonment", "Uttara", "Mohammadpur", "Dhanmondi", "Badda", "Khilkhet", "Demra", "Jatrabari", "Lalbagh", "Kotwali", "Sutrapur"],
+                "Gazipur": ["Gazipur Sadar", "Kaliakair", "Kapasia", "Sreepur", "Kaliganj"],
+                "Narayanjganj": ["Narayanjganj Sadar", "Bandar", "Araihazar", "Rupganj", "Sonargaon"],
+                "Manikganj": ["Manikganj Sadar", "Singair", "Saturia", "Shivalaya", "Ghior", "Daulatpur", "Harirampur"],
+                "Munshiganj": ["Munshiganj Sadar", "Tongibari", "Sreenagar", "Lohajang", "Gajaria", "Sirajdikhan"],
+                "Narsingdi": ["Narsingdi Sadar", "Belabo", "Monohardi", "Palash", "Raipura", "Shibpur"],
+                "Tangail": ["Tangail Sadar", "Sakhipur", "Basail", "Madhupur", "Ghatail", "Kalihati", "Nagarpur", "Mirzapur", "Gopalpur", "Delduar", "Bhuapur", "Dhanbari"],
+                "Kishoreganj": ["Kishoreganj Sadar", "Hossainpur", "Pakundia", "Katiadi", "Karimganj", "Tarail", "Itna", "Mithamoin", "Austagram", "Nikli", "Bajitpur", "Kuliarchar", "Bhairab"],
+                "Faridpur": ["Faridpur Sadar", "Boalmari", "Alfadanga", "Madhukhali", "Bhanga", "Nagarkanda", "Charbhadrasan", "Sadarpur", "Saltha"],
+                "Gopalganj": ["Gopalganj Sadar", "Kashiani", "Tungipara", "Kotalipara", "Muksudpur"],
+                "Madaripur": ["Madaripur Sadar", "Kalkini", "Rajoir", "Shibchar"],
+                "Rajbari": ["Rajbari Sadar", "Goalanda", "Pangsa", "Baliakandi", "Kalukhali"],
+                "Shariatpur": ["Shariatpur Sadar", "Naria", "Zajira", "Gosairhat", "Bhedarganj", "Damudya"]
+            },
+            "Chittagong": {
+                "Chittagong": ["Chittagong Sadar", "Sitakunda", "Mirsharai", "Patiya", "Rangunia", "Anwara", "Boalkhali", "Raozan", "Hathazari", "Fatikchhari", "Sandwip", "Lohagara", "Satkania", "Banshkhali", "Chandanaish", "Karnaphuli"],
+                "Cox's Bazar": ["Cox's Bazar Sadar", "Chakaria", "Kutubdia", "Ukhiya", "Moheshkhali", "Pekua", "Ramu", "Teknaf"],
+                "Comilla": ["Comilla Sadar", "Barura", "Brahmanpara", "Burichong", "Chandina", "Chauddagram", "Daudkandi", "Debidwar", "Homna", "Laksam", "Muradnagar", "Nangalkot", "Meghna", "Titas", "Monohargonj", "Lalmai"],
+                "Brahmanbaria": ["Brahmanbaria Sadar", "Kasba", "Nasirnagar", "Sarail", "Ashuganj", "Akhaura", "Nabinagar", "Bancharampur", "Bijoynagar"],
+                "Chandpur": ["Chandpur Sadar", "Faridganj", "Haimchar", "Haziganj", "Kachua", "Matlab North", "Matlab South", "Shahrasti"],
+                "Noakhali": ["Noakhali Sadar", "Begumganj", "Chatkhil", "Companyganj", "Hatiya", "Senbagh", "Sonaimuri", "Subarnachar", "Kabirhat"],
+                "Feni": ["Feni Sadar", "Chhagalnaiya", "Daganbhuiyan", "Parshuram", "Fulgazi", "Sonagazi"],
+                "Lakshmipur": ["Lakshmipur Sadar", "Raipur", "Ramganj", "Ramgati", "Kamalnagar"],
+                "Khagrachhari": ["Khagrachhari Sadar", "Dighinala", "Panchhari", "Laxmichhari", "Mahalchhari", "Manikchhari", "Ramgarh", "Matiranga", "Guimara"],
+                "Rangamati": ["Rangamati Sadar", "Belaichhari", "Bagaichhari", "Barkal", "Juraichhari", "Rajasthali", "Kaptai", "Langadu", "Naniarchar", "Kaukhali"],
+                "Bandarban": ["Bandarban Sadar", "Ali Kadam", "Naikhongchhari", "Rowangchhari", "Lama", "Ruma", "Thanchi"]
+            },
+            "Sylhet": {
+                "Sylhet": ["Sylhet Sadar", "Beanibazar", "Bishwanath", "Dakshin Surma", "Balaganj", "Companiganj", "Fenchuganj", "Golapganj", "Gowainghat", "Jaintiapur", "Kanaighat", "Zakiganj", "Osmani Nagar"],
+                "Moulvibazar": ["Moulvibazar Sadar", "Barlekha", "Juri", "Kamalganj", "Kulaura", "Rajnagar", "Sreemangal"],
+                "Habiganj": ["Habiganj Sadar", "Azmiriganj", "Bahubal", "Baniyachong", "Chunarughat", "Lakhai", "Madhabpur", "Nabiganj", "Shayestaganj"],
+                "Sunamganj": ["Sunamganj Sadar", "Bishwamvarpur", "Chhatak", "Derai", "Dharamapasha", "Dowarabazar", "Jagannathpur", "Jamalganj", "Tahirpur", "Sullah", "Shantiganj"]
+            },
+            "Rajshahi": {
+                "Rajshahi": ["Rajshahi Sadar", "Bagha", "Bagmara", "Charghat", "Durgapur", "Godagari", "Mohanpur", "Paba", "Puthia", "Tanore"],
+                "Bogra": ["Bogra Sadar", "Adamdighi", "Dhupchanchia", "Gabtali", "Kahaloo", "Nandigram", "Sariakandi", "Sahajanpur", "Sherpur", "Shibganj", "Sonatala"],
+                "Naogaon": ["Naogaon Sadar", "Atrai", "Badalgachhi", "Dhamoirhat", "Manda", "Mohadevpur", "Niamatpur", "Patnitala", "Porsha", "Raninagar", "Sapahar"],
+                "Natore": ["Natore Sadar", "Bagatipara", "Baraigram", "Gurudaspur", "Lalpur", "Singra", "Naldanga"],
+                "Chapainawabganj": ["Chapainawabganj Sadar", "Gomastapur", "Nachole", "Bholahat", "Shibganj"],
+                "Pabna": ["Pabna Sadar", "Atgharia", "Bera", "Bhangura", "Chatmohar", "Faridpur", "Ishwardi", "Santhia", "Sujanagar"],
+                "Sirajganj": ["Sirajganj Sadar", "Belkuchi", "Chauhali", "Kamarkhanda", "Kazipur", "Raiganj", "Shahjadpur", "Tarash", "Ullahpara"],
+                "Joypurhat": ["Joypurhat Sadar", "Akkelpur", "Kalai", "Khetlal", "Panchbibi"]
+            },
+            "Khulna": {
+                "Khulna": ["Khulna Sadar", "Batiaghata", "Dacope", "Dumuria", "Dighalia", "Koyra", "Paikgachha", "Phultala", "Rupsha", "Terokhada"],
+                "Bagerhat": ["Bagerhat Sadar", "Chitalmari", "Fakirhat", "Kachua", "Mollahat", "Mongla", "Morrelganj", "Rampal", "Sarankhola"],
+                "Chuadanga": ["Chuadanga Sadar", "Alamdanga", "Damurhuda", "Jibannagar"],
+                "Jessore": ["Jessore Sadar", "Abhaynagar", "Bagherpara", "Chaugachha", "Jhikargachha", "Keshabpur", "Manirampur", "Sharsha"],
+                "Jhenaidah": ["Jhenaidah Sadar", "Harinakunda", "Kaliganj", "Kotchandpur", "Maheshpur", "Shailkupa"],
+                "Kushtia": ["Kushtia Sadar", "Bheramara", "Daulatpur", "Khoksa", "Kumarkhali", "Mirpur"],
+                "Magura": ["Magura Sadar", "Mohammadpur", "Shalikha", "Sreepur"],
+                "Meherpur": ["Meherpur Sadar", "Gangni", "Mujibnagar"],
+                "Narail": ["Narail Sadar", "Kalia", "Lohagara"],
+                "Satkhira": ["Satkhira Sadar", "Assasuni", "Debhata", "Kalaroa", "Kaliganj", "Shyamnagar", "Tala"]
+            },
+            "Barisal": {
+                "Barisal": ["Barisal Sadar", "Agailjhara", "Babuganj", "Bakerganj", "Banaripara", "Gaurnadi", "Hizla", "Mehendiganj", "Muladi", "Wazirpur"],
+                "Barguna": ["Barguna Sadar", "Amtali", "Bamna", "Betagi", "Patharghata", "Taltali"],
+                "Bhola": ["Bhola Sadar", "Burhanuddin", "Char Fasson", "Daulatkhan", "Lalmohan", "Manpura", "Tazumuddin"],
+                "Jhalokati": ["Jhalokati Sadar", "Kathalia", "Nalchity", "Rajapur"],
+                "Patuakhali": ["Patuakhali Sadar", "Bauphal", "Dashmina", "Galachipa", "Kalapara", "Mirzaganj", "Rangabali", "Dumki"],
+                "Pirojpur": ["Pirojpur Sadar", "Bhandaria", "Kawkhali", "Mathbaria", "Nazirpur", "Nesarabad", "Indurkani"]
+            },
+            "Rangpur": {
+                "Rangpur": ["Rangpur Sadar", "Badarganj", "Gangachhara", "Kaunia", "Mithapukur", "Pirgachha", "Pirganj", "Taraganj"],
+                "Dinajpur": ["Dinajpur Sadar", "Birampur", "Birganj", "Bochaganj", "Chirirbandar", "Fulbari", "Ghoraghat", "Hakimpur", "Kaharole", "Khansama", "Nawabganj", "Parbatipur", "Birol"],
+                "Gaibandha": ["Gaibandha Sadar", "Fulchhari", "Gobindaganj", "Palashbari", "Sadullapur", "Saghata", "Sundarganj"],
+                "Kurigram": ["Kurigram Sadar", "Bhurungamari", "Char Rajibpur", "Chilmari", "Phulbari", "Nageshwari", "Rajarhat", "Raomari", "Ulipur"],
+                "Lalmonirhat": ["Lalmonirhat Sadar", "Aditmari", "Hatibandha", "Kaliganj", "Patgram"],
+                "Nilphamari": ["Nilphamari Sadar", "Dimla", "Domar", "Jaldhaka", "Kishoreganj", "Saidpur"],
+                "Panchagarh": ["Panchagarh Sadar", "Atwari", "Boda", "Debiganj", "Tetulia"],
+                "Thakurgaon": ["Thakurgaon Sadar", "Baliadangi", "Haripur", "Pirganj", "Ranishankail"]
+            },
+            "Mymensingh": {
+                "Mymensingh": ["Mymensingh Sadar", "Bhaluka", "Dhobaura", "Fulbaria", "Gafargaon", "Gauripur", "Haluaghat", "Ishwarganj", "Muktagachha", "Nandail", "Phulpur", "Trishal", "Tara Khanda"],
+                "Jamalpur": ["Jamalpur Sadar", "Baksiganj", "Dewanganj", "Islampur", "Madarganj", "Melandaha", "Sarishabari"],
+                "Netrokona": ["Netrokona Sadar", "Atpara", "Barhatta", "Durgapur", "Khaliajuri", "Kalmakanda", "Kendua", "Madan", "Mohanganj", "Purbadhala"],
+                "Sherpur": ["Sherpur Sadar", "Jhenaigati", "Nakla", "Nalitabari", "Sreebardi"]
+            }
+        };
+
+        const clCategories = [
+            { id: 'police', name: 'পুলিশ স্টেশন', icon: 'fa-user-shield' },
+            { id: 'hospital', name: 'হাসপাতাল', icon: 'fa-hospital' },
+            { id: 'ambulance', name: 'এম্বুলেন্স', icon: 'fa-ambulance' },
+            { id: 'electricity', name: 'বিদ্যুৎ জোনাল অফিস', icon: 'fa-bolt' },
+            { id: 'fire', name: 'ফায়ার সার্ভিস', icon: 'fa-fire-extinguisher' },
+            { id: 'gas', name: 'গ্যাস ফিলিং স্টেশন', icon: 'fa-burn' },
+            { id: 'wasa', name: 'ওয়াসা', icon: 'fa-tint' },
+            { id: 'petrol', name: 'পেট্রোল পাম্প', icon: 'fa-gas-pump' },
+            { id: 'govt', name: 'সরকারী কার্যালয়', icon: 'fa-landmark' }
+        ];
+
+        let clState = { step: 0, category: '', division: '', district: '', upazila: '' };
+
+        function initContactList() {
+            renderCategories();
+            goToClStep(0);
+        }
+
+        function goToClStep(stepIndex) {
+            clState.step = stepIndex;
+            const slider = document.getElementById('clSlider');
+            slider.style.transform = `translateX(-${stepIndex * 20}%)`;
+            
+            const titles = [
+                "ক্যাটাগরি নির্বাচন করুন", 
+                "বিভাগ নির্বাচন করুন", 
+                "জেলা নির্বাচন করুন", 
+                "উপজেলা নির্বাচন করুন", 
+                "রেজাল্ট / কন্টাক্ট লিস্ট"
+            ];
+            document.getElementById('clTitle').innerText = titles[stepIndex];
+            
+            if(stepIndex > 0) {
+                document.getElementById('clBackBtn').classList.remove('d-none');
+            } else {
+                document.getElementById('clBackBtn').classList.add('d-none');
+            }
+        }
+
+        function prevContactStep() {
+            if(clState.step > 0) goToClStep(clState.step - 1);
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('clCategoryList');
+            container.innerHTML = '';
+            clCategories.forEach(cat => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item cl-item d-flex align-items-center py-3';
+                item.innerHTML = `<i class="fas ${cat.icon} me-3 text-primary" style="width:20px"></i> ${cat.name}`;
+                item.onclick = () => {
+                    clState.category = cat.name;
+                    renderDivisions();
+                    goToClStep(1);
+                };
+                container.appendChild(item);
+            });
+        }
+
+        function renderDivisions() {
+            const container = document.getElementById('clDivisionList');
+            container.innerHTML = '';
+            const divisions = Object.keys(bdGeoData);
+            
+            divisions.forEach(div => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item cl-item py-3';
+                item.innerText = div + ' বিভাগ';
+                item.onclick = () => {
+                    clState.division = div;
+                    renderDistricts(div);
+                    goToClStep(2);
+                };
+                container.appendChild(item);
+            });
+        }
+
+        function renderDistricts(divName) {
+            const container = document.getElementById('clDistrictList');
+            container.innerHTML = '';
+            const districts = bdGeoData[divName] ? Object.keys(bdGeoData[divName]) : [];
+            
+            if(districts.length === 0) {
+                container.innerHTML = '<div class="text-muted p-3">এই বিভাগে কোন ডাটা নেই</div>';
+                return;
+            }
+
+            districts.forEach(dist => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item cl-item py-3';
+                item.innerText = dist + ' জেলা';
+                item.onclick = () => {
+                    clState.district = dist;
+                    renderUpazilas(divName, dist);
+                    goToClStep(3);
+                };
+                container.appendChild(item);
+            });
+        }
+
+        function renderUpazilas(divName, distName) {
+            const container = document.getElementById('clUpazilaList');
+            container.innerHTML = '';
+            const upazilas = bdGeoData[divName][distName] || [];
+
+            upazilas.forEach(upz => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item cl-item py-3';
+                item.innerText = upz;
+                item.onclick = () => {
+                    clState.upazila = upz;
+                    showResultPage();
+                    goToClStep(4);
+                };
+                container.appendChild(item);
+            });
+        }
+
+        function showResultPage() {
+            const breadcrumb = `${clState.category} > ${clState.division} > ${clState.district} > ${clState.upazila}`;
+            document.getElementById('clSelectedBreadcrumb').innerText = breadcrumb;
+            
+            if(window.loadContactListDB) {
+                window.loadContactListDB(clState.category, clState.division, clState.district, clState.upazila);
+            }
+        }
+
+    </script>
+</body>
+</html>me}`;
+                item.onclick = () => {
+                    clState.category = cat.name;
+                    renderDivisions();
+                    goToClStep(1);
+                };
+                container.appendChild(item);
+            });
+        }
+
+        // Step 2: Render Divisions
+        function renderDivisions() {
+            const container = document.getElementById('clDivisionList');
+            container.innerHTML = '';
+            const divisions = Object.keys(bdGeoData);
+            
+            divisions.forEach(div => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item cl-item py-3';
+                item.innerText = div + ' বিভাগ';
+                item.onclick = () => {
+                    clState.division = div;
+                    renderDistricts(div);
+                    goToClStep(2);
+                };
+                container.appendChild(item);
+            });
+        }
+
+        // Step 3: Render Districts
+        function renderDistricts(divName) {
+            const container = document.getElementById('clDistrictList');
+            container.innerHTML = '';
+            const districts = bdGeoData[divName] ? Object.keys(bdGeoData[divName]) : [];
+            
+            if(districts.length === 0) {
+                container.innerHTML = '<div class="text-muted p-3">এই বিভাগে কোন ডাটা নেই</div>';
+                return;
+            }
+
+            districts.forEach(dist => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item cl-item py-3';
+                item.innerText = dist + ' জেলা';
+                item.onclick = () => {
+                    clState.district = dist;
+                    renderUpazilas(divName, dist);
+                    goToClStep(3);
+                };
+                container.appendChild(item);
+            });
+        }
+
+        // Step 4: Render Upazilas
+        function renderUpazilas(divName, distName) {
+            const container = document.getElementById('clUpazilaList');
+            container.innerHTML = '';
+            const upazilas = bdGeoData[divName][distName] || [];
+
+            upazilas.forEach(upz => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item cl-item py-3';
+                item.innerText = upz;
+                item.onclick = () => {
+                    clState.upazila = upz;
+                    showResultPage();
+                    goToClStep(4);
+                };
+                container.appendChild(item);
+            });
+        }
+
+        // Step 5: Result Page
+        function showResultPage() {
+            const breadcrumb = `${clState.category} > ${clState.division} > ${clState.district} > ${clState.upazila}`;
+            document.getElementById('clSelectedBreadcrumb').innerText = breadcrumb;
+            
+            // Trigger Firebase Load via window object
+            if(window.loadContactListDB) {
+                window.loadContactListDB(clState.category, clState.division, clState.district, clState.upazila);
+            }
+        }
+
+    </script>
+</body>
+</html>
